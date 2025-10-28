@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-graduation-cap me-2"></i>
+                Attendance Dashboard
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#manualEntryModal">
+                            <i class="fas fa-plus me-1"></i>Manual Entry
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                        <h5 class="card-title">Total Students</h5>
+                        <h3 class="text-primary" id="totalStudents">-</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                        <h5 class="card-title">Overall Attendance</h5>
+                        <h3 class="text-success" id="overallAttendance">-</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-2x text-info mb-2"></i>
+                        <h5 class="card-title">Class Average</h5>
+                        <h3 class="text-info" id="classAverage">-</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card summary-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-day fa-2x text-warning mb-2"></i>
+                        <h5 class="card-title">Today's Present</h5>
+                        <h3 class="text-warning" id="todayPresent">-</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Time Display -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h4 class="mb-2">
+                            <i class="fas fa-clock me-2 text-primary"></i>
+                            Current Time: <span id="currentTime" class="text-primary"></span>
+                        </h4>
+                        <p class="text-muted mb-0">Attendance times are displayed in 12-hour format (AM/PM)</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Student Statistics Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2"></i>Student Statistics
+                        </h5>
+                        <button class="btn btn-primary btn-sm" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th>Present Days</th>
+                                        <th>Total Days</th>
+                                        <th>Attendance %</th>
+                                        <th>Current Streak</th>
+                                        <th>Late Arrivals</th>
+                                        <th>Status Today</th>
+                                        <th>Last Marked Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentsTableBody">
+                                    <tr>
+                                        <td colspan="9" class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-pie me-2"></i>Attendance Distribution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="attendancePieChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>Monthly Trends
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="monthlyTrendsChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manual Entry Modal -->
+    <div class="modal fade" id="manualEntryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus me-2"></i>Manual Attendance Entry
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="manualEntryForm">
+                        <div class="mb-3">
+                            <label for="studentSelect" class="form-label">Select Student</label>
+                            <select class="form-select" id="studentSelect" required>
+                                <option value="">Choose student...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="statusSelect" class="form-label">Status</label>
+                            <select class="form-select" id="statusSelect" required>
+                                <option value="present">Present</option>
+                                <option value="absent">Absent</option>
+                                <option value="late">Late</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitManualEntry()">
+                        <i class="fas fa-save me-1"></i>Save Entry
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Detail Modal -->
+    <div class="modal fade" id="studentDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user me-2"></i>Student Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="studentDetailContent">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast for notifications -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="notificationToast" class="toast" role="alert">
+            <div class="toast-header">
+                <i class="fas fa-info-circle text-primary me-2"></i>
+                <strong class="me-auto">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastMessage">
+                <!-- Message will be set dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script>
+        // Global variables
+        let studentsData = [];
+        let attendancePieChart = null;
+        let monthlyTrendsChart = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStudents();
+            loadSummaryData();
+            loadStudentsData();
+            startClock();
+        });
+
+        // Real-time clock
+        function startClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: true
+                });
+                document.getElementById('currentTime').textContent = timeString;
+            }
+            
+            updateClock(); // Initial call
+            setInterval(updateClock, 1000); // Update every second
+        }
+
+        // Load students for manual entry dropdown
+        async function loadStudents() {
+            try {
+                const response = await fetch('/api/students');
+                const students = await response.json();
+                
+                const select = document.getElementById('studentSelect');
+                select.innerHTML = '<option value="">Choose student...</option>';
+                students.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student;
+                    option.textContent = student;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+
+        // Load summary data
+        async function loadSummaryData() {
+            try {
+                const response = await fetch('/api/attendance/summary');
+                const data = await response.json();
+                
+                document.getElementById('totalStudents').textContent = data.total_students;
+                document.getElementById('overallAttendance').textContent = data.overall_percentage + '%';
+                document.getElementById('classAverage').textContent = data.class_average + '%';
+                
+                const todayPresent = data.today_attendance.filter(att => att.present).length;
+                document.getElementById('todayPresent').textContent = todayPresent + '/' + data.total_students;
+                
+                // Update pie chart
+                updateAttendancePieChart(data.today_attendance);
+            } catch (error) {
+                console.error('Error loading summary data:', error);
+            }
+        }
+
+        // Load students data for table
+        async function loadStudentsData() {
+            try {
+                const response = await fetch('/api/stats/all');
+                const data = await response.json();
+                studentsData = data.students;
+                
+                const tbody = document.getElementById('studentsTableBody');
+                tbody.innerHTML = '';
+                
+                data.students.forEach(student => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${student.student_name}</td>
+                        <td>${student.present_days}</td>
+                        <td>${student.total_days}</td>
+                        <td>
+                            <span class="badge ${getAttendanceBadgeClass(student.attendance_percentage)}">
+                                ${student.attendance_percentage}%
+                            </span>
+                        </td>
+                        <td>${student.current_streak}</td>
+                        <td>${student.late_arrivals}</td>
+                        <td>
+                            <span class="badge bg-secondary" id="status-${student.student_name}">
+                                Loading...
+                            </span>
+                        </td>
+                        <td>
+                            <span class="last-marked-time not-marked" id="lastTime-${student.student_name}">
+                                <i class="fas fa-clock me-1"></i>Loading...
+                            </span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewStudentDetails('${student.student_name}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                // Update today's status for each student
+                updateTodayStatus(data.students);
+            } catch (error) {
+                console.error('Error loading students data:', error);
+            }
+        }
+
+        // Update today's status for students
+        async function updateTodayStatus(students) {
+            try {
+                const response = await fetch('/api/attendance/summary');
+                const data = await response.json();
+                
+                students.forEach(student => {
+                    const todayData = data.today_attendance.find(att => att.student_name === student.student_name);
+                    const statusElement = document.getElementById(`status-${student.student_name}`);
+                    const timeElement = document.getElementById(`lastTime-${student.student_name}`);
+                    
+                    if (todayData) {
+                        statusElement.textContent = todayData.present ? 'Present' : 'Absent';
+                        statusElement.className = `badge ${todayData.present ? 'bg-success' : 'bg-danger'}`;
+                        
+                        // Update last marked time
+                        if (todayData.last_marked_time) {
+                            const markedTime = new Date(todayData.last_marked_time);
+                            const timeString = markedTime.toLocaleTimeString('en-US', {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                hour12: true
+                            });
+                            timeElement.innerHTML = `<i class="fas fa-clock me-1"></i>${timeString}`;
+                            timeElement.className = `last-marked-time ${todayData.present ? 'present' : 'absent'}`;
+                        } else {
+                            timeElement.innerHTML = '<i class="fas fa-clock me-1"></i>Not marked today';
+                            timeElement.className = 'last-marked-time not-marked';
+                        }
+                    } else {
+                        timeElement.innerHTML = '<i class="fas fa-clock me-1"></i>Not marked today';
+                        timeElement.className = 'last-marked-time not-marked';
+                    }
+                });
+            } catch (error) {
+                console.error('Error updating today status:', error);
+            }
+        }
+
+        // Get badge class based on attendance percentage
+        function getAttendanceBadgeClass(percentage) {
+            if (percentage >= 90) return 'bg-success';
+            if (percentage >= 75) return 'bg-warning';
+            return 'bg-danger';
+        }
+
+        // Update attendance pie chart
+        function updateAttendancePieChart(todayAttendance) {
+            const ctx = document.getElementById('attendancePieChart').getContext('2d');
+            
+            if (attendancePieChart) {
+                attendancePieChart.destroy();
+            }
+            
+            const present = todayAttendance.filter(att => att.present).length;
+            const absent = todayAttendance.length - present;
+            
+            attendancePieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Present', 'Absent'],
+                    datasets: [{
+                        data: [present, absent],
+                        backgroundColor: ['#28a745', '#dc3545'],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Submit manual entry
+        async function submitManualEntry() {
+            const studentName = document.getElementById('studentSelect').value;
+            const status = document.getElementById('statusSelect').value;
+            
+            if (!studentName) {
+                showToast('Please select a student', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/attendance/manual', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        student_name: studentName,
+                        status: status
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    const currentTime = new Date().toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    showToast(`Attendance logged successfully at ${currentTime}`, 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('manualEntryModal')).hide();
+                    refreshData();
+                } else {
+                    showToast(result.error || 'Failed to log attendance', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting manual entry:', error);
+                showToast('Error submitting entry', 'error');
+            }
+        }
+
+        // View student details
+        async function viewStudentDetails(studentName) {
+            try {
+                const response = await fetch(`/api/stats/${studentName}`);
+                const student = await response.json();
+                
+                if (response.ok) {
+                    const content = document.getElementById('studentDetailContent');
+                    content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Basic Statistics</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Present Days:</span>
+                                        <span class="fw-bold">${student.present_days}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Total Days:</span>
+                                        <span class="fw-bold">${student.total_days}</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Attendance %:</span>
+                                        <span class="fw-bold text-${getAttendanceBadgeClass(student.attendance_percentage).replace('bg-', '')}">${student.attendance_percentage}%</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Current Streak:</span>
+                                        <span class="fw-bold">${student.current_streak} days</span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span>Late Arrivals:</span>
+                                        <span class="fw-bold">${student.late_arrivals}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Recent Attendance (Last 10 days)</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${student.recent_attendance.slice(0, 10).map(record => `
+                                                <tr>
+                                                    <td>${new Date(record[0]).toLocaleDateString()}</td>
+                                                    <td>
+                                                        <span class="badge ${record[1] === 'present' ? 'bg-success' : 'bg-danger'}">
+                                                            ${record[1]}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
+                    modal.show();
+                } else {
+                    showToast('Student not found', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading student details:', error);
+                showToast('Error loading student details', 'error');
+            }
+        }
+
+        // Refresh all data
+        function refreshData() {
+            loadSummaryData();
+            loadStudentsData();
+        }
+
+        // Show toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('notificationToast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            // Update toast header icon and color based on type
+            const header = toast.querySelector('.toast-header');
+            const icon = header.querySelector('i');
+            
+            icon.className = `fas ${type === 'success' ? 'fa-check-circle text-success' : type === 'error' ? 'fa-exclamation-circle text-danger' : 'fa-info-circle text-primary'} me-2`;
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    </script>
+</body>
+</html>
+
